@@ -185,6 +185,7 @@ class PGCli:
         warn=None,
         ssh_tunnel_url: Optional[str] = None,
         log_file: Optional[str] = None,
+        output_file: Optional[str] = None,
     ):
         self.force_passwd_prompt = force_passwd_prompt
         self.never_passwd_prompt = never_passwd_prompt
@@ -205,7 +206,6 @@ class PGCli:
         self.initialize_logging()
 
         self.set_default_pager(c)
-        self.output_file = None
         self.pgspecial = PGSpecial()
 
         self.explain_mode = False
@@ -299,6 +299,17 @@ class PGCli:
             with open(log_file, "a+"):
                 pass  # ensure writeable
         self.log_file = log_file
+
+        # Set initial output file if specified via command line
+        if output_file:
+            output_file = os.path.abspath(os.path.expanduser(output_file))
+            try:
+                with open(output_file, "w"):
+                    pass  # ensure writeable
+            except OSError as e:
+                click.secho(f"Cannot write to output file: {e}", err=True, fg="red")
+                sys.exit(1)
+        self.output_file = output_file
 
         # formatter setup
         self.formatter = TabularOutputFormatter(format_name=c["main"]["table_format"])
@@ -1435,6 +1446,13 @@ class PGCli:
     type=str,
     help="SQL statement to execute after connecting.",
 )
+@click.option(
+    "-o",
+    "--output",
+    "output_file",
+    default=None,
+    help="Send query results to file (or |pipe).",
+)
 @click.argument("dbname", default=lambda: None, envvar="PGDATABASE", nargs=1)
 @click.argument("username", default=lambda: None, envvar="PGUSER", nargs=1)
 def cli(
@@ -1463,6 +1481,7 @@ def cli(
     ssh_tunnel: str,
     init_command: str,
     log_file: str,
+    output_file: str,
 ):
     if version:
         print("Version:", __version__)
@@ -1521,6 +1540,7 @@ def cli(
         warn=warn,
         ssh_tunnel_url=ssh_tunnel,
         log_file=log_file,
+        output_file=output_file,
     )
 
     # Choose which ever one has a valid value.

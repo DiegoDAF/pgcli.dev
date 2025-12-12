@@ -595,3 +595,56 @@ def test_notifications(executor):
     with mock.patch("pgcli.main.click.secho") as mock_secho:
         run(executor, "notify chan1, 'testing2'")
         mock_secho.assert_not_called()
+
+
+@dbtest
+def test_output_file_option(tmpdir, executor):
+    """Test that output_file option properly redirects query output to a file."""
+    output_file = str(tmpdir.join("output.txt"))
+    cli = PGCli(pgexecute=executor, output_file=output_file)
+
+    # Verify that output_file was set
+    assert cli.output_file == output_file
+
+    # Execute a query
+    statement = "SELECT 'Hello, World!' as greeting;"
+    cli.execute_command(statement)
+
+    # Verify that the file was written to
+    assert os.path.exists(output_file)
+    with open(output_file, "r") as f:
+        contents = f.read()
+        assert statement in contents
+        assert "Hello, World!" in contents
+
+
+@dbtest
+def test_output_file_with_backslash_o(tmpdir, executor):
+    """Test that \\o command works to redirect output."""
+    output_file = str(tmpdir.join("output2.txt"))
+    cli = PGCli(pgexecute=executor)
+
+    # Use \o to set output file
+    statement = f"\\o {output_file}"
+    result = run(executor, statement, pgspecial=cli.pgspecial)
+    assert f'Writing to file "{output_file}"' in result[0]
+
+    # Verify that output_file was set
+    assert cli.output_file == output_file
+
+    # Execute a query
+    statement2 = "SELECT 'Test Output' as message;"
+    cli.execute_command(statement2)
+
+    # Verify that the file was written to
+    assert os.path.exists(output_file)
+    with open(output_file, "r") as f:
+        contents = f.read()
+        assert statement2 in contents
+        assert "Test Output" in contents
+
+    # Disable output file with \o
+    statement3 = "\\o"
+    result = run(executor, statement3, pgspecial=cli.pgspecial)
+    assert "File output disabled" in result[0]
+    assert cli.output_file is None
