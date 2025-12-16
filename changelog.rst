@@ -3,39 +3,16 @@ Upcoming (TBD)
 
 Features:
 ---------
-* Add support for `tuples-only` option to print rows without extra output.
-    * Command line option `-t` or `--tuples-only`.
-    * Without value, defaults to `csv-noheader` format.
-    * Optionally specify a table format (e.g., `-t minimal`).
-    * Suppresses status messages (SELECT X) and timing information.
-    * Similar to psql's `-t` flag, useful for scripting and automation.
 * Add support for `init-command` to run when the connection is established.
     * Command line option `--init-command`
     * Provide `init-command` in the config file
     * Support dsn specific init-command in the config file
 * Add suggestion when setting the search_path
 * Allow per dsn_alias ssh tunnel selection
-* Add support for `single-command` to run a SQL command and exit.
-    * Command line option `-c` or `--command`.
-    * You can specify multiple times.
-* Add support for `file` to execute commands from a file and exit.
-    * Command line option `-f` or `--file`.
-    * You can specify multiple times.
-    * Similar to psql's `-f` option.
 * Add support for forcing destructive commands without confirmation.
     * Command line option `-y` or `--yes`.
     * Skips the destructive command confirmation prompt when enabled.
     * Useful for automated scripts and CI/CD pipelines.
-* Add hostaddr to handle .pgpass with ssh tunnels
-
-Documentation:
---------------
-
-* Document previously undocumented table formats in config file:
-    * `csv-noheader` - CSV format without headers
-    * `tsv_noheader` - TSV format without headers
-    * `csv-tab-noheader` - Alias for tsv_noheader
-    * `minimal` - Aligned columns without headers or borders
 
 Internal:
 ---------
@@ -45,14 +22,11 @@ Internal:
   * Use github trusted publisher for pypi release
   * Update dev requirements and replace requirements-dev.txt with pyproject.toml
   * Use ruff instead of black
-* Implement daily log rotation at midnight with 30-day retention using TimedRotatingFileHandler
-* Change default log location to /var/log/pgcli/pgcli.log (with automatic fallback to ~/.config/pgcli/log if no permissions)
 
 Bug fixes:
 ----------
 
 * Improve display of larger durations when passed as floats
-* Fix `--yes` flag to suppress "Your call!" message when auto-confirming destructive commands
 
 4.3.0 (2025-03-22)
 ==================
