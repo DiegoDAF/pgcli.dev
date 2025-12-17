@@ -38,6 +38,11 @@ Features:
     * Day-of-month mode creates files like `pgcli-01.log`, overwrites monthly
     * Date mode creates files like `pgcli-20250127.log`, never overwrites
     * Backward compatible: defaults to single `pgcli.log` file when `log_rotation_mode = none`
+* Enable .pgpass support for SSH tunnel connections
+    * Preserve original hostname for .pgpass lookup when using SSH tunnels
+    * Use PostgreSQL's `hostaddr` parameter to specify tunnel endpoint
+    * Add SSH configuration options (ssh_config_file, allow_agent, compression)
+    * `.pgpass` file now works seamlessly with `--ssh-tunnel` option
 
 Internal:
 ---------
