@@ -741,7 +741,7 @@ class PGCli:
                 "ssh_address_or_host": (tunnel_info.hostname, tunnel_info.port or 22),
                 "logger": self.logger,
                 "ssh_config_file": "~/.ssh/config",  # Use SSH config for host settings
-                "allow_agent": True,  # Allow SSH agent for authentication
+                "allow_agent": False,  # Disable agent to use keys from ssh_config
                 "compression": False,  # Disable compression for better performance
             }
             if tunnel_info.username:
@@ -753,10 +753,20 @@ class PGCli:
             # We can remove this when https://github.com/pahaz/sshtunnel/pull/250 is merged.
             logger_handlers = self.logger.handlers.copy()
             try:
+                self.logger.debug("Creating SSH tunnel with params: %r", params)
                 self.ssh_tunnel = sshtunnel.SSHTunnelForwarder(**params)
+                self.logger.debug("SSH tunnel created, calling start()...")
                 self.ssh_tunnel.start()
+                self.logger.debug("SSH tunnel start() returned, is_active: %s", self.ssh_tunnel.is_active)
+
+                # Verify tunnel is actually active
+                if not self.ssh_tunnel.is_active:
+                    raise Exception(f"SSH tunnel failed to start (is_active={self.ssh_tunnel.is_active})")
+
+                self.logger.debug("SSH tunnel verified active")
             except Exception as e:
                 self.logger.handlers = logger_handlers
+                self.logger.error("SSH tunnel failed: %s", str(e))
                 self.logger.error("traceback: %r", traceback.format_exc())
                 click.secho(str(e), err=True, fg="red")
                 sys.exit(1)
@@ -767,6 +777,7 @@ class PGCli:
             # Use hostaddr to specify the actual connection endpoint (SSH tunnel)
             hostaddr = "127.0.0.1"
             port = self.ssh_tunnel.local_bind_ports[0]
+            self.logger.debug("SSH tunnel ready, local port: %d, hostaddr: %s", port, hostaddr)
 
             if dsn:
                 dsn = make_conninfo(dsn, host=host, hostaddr=hostaddr, port=port)
