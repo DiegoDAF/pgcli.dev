@@ -216,6 +216,13 @@ keyring = True
 # If unset, uses the server's time zone, which is the Postgres default
 use_local_timezone = True
 
+# Application name reported to PostgreSQL server.
+# This name appears in pg_stat_activity and server logs, useful for monitoring
+# and debugging which application or script is making queries.
+# Default: pgcli
+# Can be overridden with --application-name CLI flag or PGAPPNAME environment variable
+application_name = pgcli
+
 # Custom colors for the completion menu, toolbar, etc.
 [colors]
 completion-menu.completion.current = 'bg:#ffffff #000000'

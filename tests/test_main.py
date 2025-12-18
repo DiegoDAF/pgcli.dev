@@ -780,3 +780,56 @@ def test_without_force_destructive_calls_confirmation(executor):
 
         # Verify that the command was attempted
         assert result is not None
+
+
+@dbtest
+def test_application_name_from_config(executor):
+    """Test that application_name is read from config file."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_file = os.path.join(tmpdir, "config")
+        with open(config_file, "w") as f:
+            f.write(
+                "[main]\n"
+                "application_name = my-custom-app\n"
+                "log_file = default\n"
+            )
+
+        with mock.patch("pgcli.main.config_location", return_value=tmpdir + "/"):
+            cli = PGCli(pgexecute=executor, pgclirc_file=config_file)
+
+        assert cli.application_name == "my-custom-app"
+
+
+@dbtest
+def test_application_name_cli_overrides_config(executor):
+    """Test that CLI argument overrides config file value."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_file = os.path.join(tmpdir, "config")
+        with open(config_file, "w") as f:
+            f.write(
+                "[main]\n"
+                "application_name = config-app\n"
+                "log_file = default\n"
+            )
+
+        with mock.patch("pgcli.main.config_location", return_value=tmpdir + "/"):
+            cli = PGCli(pgexecute=executor, pgclirc_file=config_file, application_name="cli-app")
+
+        assert cli.application_name == "cli-app"
+
+
+@dbtest
+def test_application_name_default_when_not_in_config(executor):
+    """Test that default 'pgcli' is used when not specified in config."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_file = os.path.join(tmpdir, "config")
+        with open(config_file, "w") as f:
+            f.write(
+                "[main]\n"
+                "log_file = default\n"
+            )
+
+        with mock.patch("pgcli.main.config_location", return_value=tmpdir + "/"):
+            cli = PGCli(pgexecute=executor, pgclirc_file=config_file)
+
+        assert cli.application_name == "pgcli"

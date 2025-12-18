@@ -3,6 +3,32 @@ Upcoming (TBD)
 
 Features:
 ---------
+* Add support for configurable `application_name` via config file.
+    * New config option `application_name` in `[main]` section
+    * Defaults to `pgcli` for backward compatibility
+    * CLI flag `--application-name` and environment variable `PGAPPNAME` still override config
+    * Priority order: CLI flag > env var > config file > default "pgcli"
+    * Application name appears in `pg_stat_activity` and PostgreSQL logs
+    * Useful for monitoring and debugging which script/application is making queries
+* Improve bash completion with DSN alias autocompletion.
+    * Added `_pgcli_dsn_aliases()` function to autocomplete DSN aliases from config
+    * DSN aliases autocomplete when using `-D` or `--dsn` flags
+    * Automatically reads from `~/.config/pgcli/config` [alias_dsn] section
+    * Updated all CLI options in bash completion script
+    * Example: `pgcli -D <TAB>` shows all configured DSN aliases
+
+Bug Fixes:
+----------
+* Fix keyring key collision when using same user/host with different ports.
+    * Include port in keyring service name to prevent password overwriting
+    * Particularly useful when using SSH tunnels where host is always localhost
+    * Key format changed from `user@host` to `user@host@port`
+
+4.3.9 (2025-12-17)
+==================
+
+Features:
+---------
 * Add support for `init-command` to run when the connection is established.
     * Command line option `--init-command`
     * Provide `init-command` in the config file

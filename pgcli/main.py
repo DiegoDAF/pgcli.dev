@@ -226,7 +226,13 @@ class PGCli:
         else:
             self.row_limit = c["main"].as_int("row_limit")
 
-        self.application_name = application_name
+        # Application name: CLI arg > config file > default "pgcli"
+        if application_name != "pgcli":
+            # CLI argument was explicitly provided
+            self.application_name = application_name
+        else:
+            # Read from config, defaulting to "pgcli"
+            self.application_name = c["main"].get("application_name", "pgcli")
 
         # if not specified, set to DEFAULT_MAX_FIELD_WIDTH
         # if specified but empty, set to None to disable truncation
@@ -683,7 +689,7 @@ class PGCli:
         if self.force_passwd_prompt and not passwd:
             passwd = click.prompt("Password for %s" % user, hide_input=True, show_default=False, type=str)
 
-        key = f"{user}@{host}"
+        key = f"{user}@{host}@{port}"
 
         if not passwd and auth.keyring:
             passwd = auth.keyring_get_password(key)
