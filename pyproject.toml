@@ -47,6 +47,8 @@ dynamic = ["version"]
 
 [project.scripts]
 pgcli = "pgcli.main:cli"
+pgcli_dump = "pgcli.dump:cli"
+pgcli_dumpall = "pgcli.dumpall:cli"
 
 [project.optional-dependencies]
 keyring = ["keyring >= 12.2.0"]

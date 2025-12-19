@@ -3,6 +3,17 @@ Upcoming (TBD)
 
 Features:
 ---------
+* Add `pgcli_dump` and `pgcli_dumpall` commands (wrappers for pg_dump/pg_dumpall with SSH tunnel support).
+    * Uses the same SSH tunnel configuration as pgcli
+    * Supports `--ssh-tunnel` option for explicit tunnel URL
+    * Supports `--dsn` option for DSN-based tunnel lookup
+    * All pg_dump/pg_dumpall options are passed through unchanged
+    * Automatically finds pg_dump/pg_dumpall in PATH or common PostgreSQL locations
+    * Example: `pgcli_dump --ssh-tunnel user@bastion -h db.internal mydb > backup.sql`
+    * Example: `pgcli_dumpall --dsn production -g -f globals.sql`
+* Add reusable `SSHTunnelManager` class in `pgcli/ssh_tunnel.py` for SSH tunnel management.
+    * Can be used by other tools to leverage pgcli's SSH tunnel configuration
+    * Supports host-based and DSN-based tunnel lookup from config
 * Add support for configurable `application_name` via config file.
     * New config option `application_name` in `[main]` section
     * Defaults to `pgcli` for backward compatibility
