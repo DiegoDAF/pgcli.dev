@@ -3,24 +3,83 @@ Upcoming (TBD)
 
 Features:
 ---------
+* Add `pgcli_dump` and `pgcli_dumpall` commands (wrappers for pg_dump/pg_dumpall with SSH tunnel support).
+    * Uses the same SSH tunnel configuration as pgcli
+    * Supports `--ssh-tunnel` option for explicit tunnel URL
+    * Supports `--dsn` option for DSN-based tunnel lookup
+    * All pg_dump/pg_dumpall options are passed through unchanged
+    * Automatically finds pg_dump/pg_dumpall in PATH or common PostgreSQL locations
+    * Example: `pgcli_dump --ssh-tunnel user@bastion -h db.internal mydb > backup.sql`
+    * Example: `pgcli_dumpall --dsn production -g -f globals.sql`
+* Add reusable `SSHTunnelManager` class in `pgcli/ssh_tunnel.py` for SSH tunnel management.
+    * Can be used by other tools to leverage pgcli's SSH tunnel configuration
+    * Supports host-based and DSN-based tunnel lookup from config
+* Add support for configurable `application_name` via config file.
+    * New config option `application_name` in `[main]` section
+    * Defaults to `pgcli` for backward compatibility
+    * CLI flag `--application-name` and environment variable `PGAPPNAME` still override config
+    * Priority order: CLI flag > env var > config file > default "pgcli"
+    * Application name appears in `pg_stat_activity` and PostgreSQL logs
+    * Useful for monitoring and debugging which script/application is making queries
+* Improve bash completion with DSN alias autocompletion.
+    * Added `_pgcli_dsn_aliases()` function to autocomplete DSN aliases from config
+    * DSN aliases autocomplete when using `-D` or `--dsn` flags
+    * Automatically reads from `~/.config/pgcli/config` [alias_dsn] section
+    * Updated all CLI options in bash completion script
+    * Example: `pgcli -D <TAB>` shows all configured DSN aliases
+
+Bug Fixes:
+----------
+* Fix keyring key collision when using same user/host with different ports.
+    * Include port in keyring service name to prevent password overwriting
+    * Particularly useful when using SSH tunnels where host is always localhost
+    * Key format changed from `user@host` to `user@host@port`
+
+4.3.9 (2025-12-17)
+==================
+
+Features:
+---------
 * Add support for `init-command` to run when the connection is established.
     * Command line option `--init-command`
     * Provide `init-command` in the config file
     * Support dsn specific init-command in the config file
 * Add suggestion when setting the search_path
 * Allow per dsn_alias ssh tunnel selection
-* Add support for `single-command` to run a SQL command and exit.
-    * Command line option `-c` or `--command`.
-    * You can specify multiple times.
-* Add support for `file` to execute commands from a file and exit.
-    * Command line option `-f` or `--file`.
-    * You can specify multiple times.
-    * Similar to psql's `-f` option.
 * Add support for forcing destructive commands without confirmation.
     * Command line option `-y` or `--yes`.
     * Skips the destructive command confirmation prompt when enabled.
     * Useful for automated scripts and CI/CD pipelines.
-* Add hostaddr to handle .pgpass with ssh tunnels
+* Add support for executing SQL commands from command line.
+    * Command line option `-c` or `--command` to execute SQL and exit
+    * Supports multiple `-c` options executed sequentially
+    * Example: `pgcli -c "SELECT 1" -c "SELECT 2"`
+* Add support for executing SQL from files.
+    * Command line option `-f` or `--file` to execute SQL from file and exit
+    * Supports multiple files executed in order
+    * Example: `pgcli -f setup.sql -f data.sql`
+* Add tuples-only output mode (psql-compatible).
+    * Command line option `-t` or `--tuples-only` to print only rows without headers/status
+    * Supports custom format: `-t minimal`, `-t simple`, etc.
+    * Defaults to `csv-noheader` format
+    * Suppresses timing, status messages, and headers
+* Add output file redirection (psql-compatible).
+    * Command line option `-o` or `--output` to redirect output to file
+    * Similar to psql's `\o` command but from command line
+    * Validates file is writable before execution
+    * Example: `pgcli -o results.txt -c "SELECT * FROM users"`
+* Add log rotation support with multiple modes (inspired by PostgreSQL `log_filename`).
+    * Config option `log_rotation_mode`: `none` (default), `day-of-week`, `day-of-month`, `date`
+    * Config option `log_destination`: customize log directory location
+    * Day-of-week mode creates files like `pgcli-Mon.log`, overwrites weekly
+    * Day-of-month mode creates files like `pgcli-01.log`, overwrites monthly
+    * Date mode creates files like `pgcli-20250127.log`, never overwrites
+    * Backward compatible: defaults to single `pgcli.log` file when `log_rotation_mode = none`
+* Enable .pgpass support for SSH tunnel connections
+    * Preserve original hostname for .pgpass lookup when using SSH tunnels
+    * Use PostgreSQL's `hostaddr` parameter to specify tunnel endpoint
+    * Add SSH configuration options (ssh_config_file, allow_agent, compression)
+    * `.pgpass` file now works seamlessly with `--ssh-tunnel` option
 
 Internal:
 ---------

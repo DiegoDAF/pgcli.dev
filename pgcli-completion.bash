@@ -25,6 +25,28 @@ _pg_services()
     COMPREPLY=( $(compgen -W "$services" -- "$suffix") )
 }
 
+_pgcli_dsn_aliases()
+{
+    # return list of DSN aliases from pgcli config
+    local dsn_aliases
+    local config_file="${HOME}/.config/pgcli/config"
+
+    if [[ -f "$config_file" ]]; then
+        # Extract DSN aliases from [alias_dsn] section
+        # Read from [alias_dsn] section until next section
+        dsn_aliases=$(awk '
+            /^\[alias_dsn\]$/ { in_section=1; next }
+            /^\[.*\]$/ { in_section=0 }
+            in_section && /^[a-zA-Z0-9_-]+ *=/ && !/^#/ {
+                sub(/ *=.*/, "")
+                print $0
+            }
+        ' "$config_file")
+    fi
+
+    COMPREPLY=( $(compgen -W "$dsn_aliases" -- "$cur") )
+}
+
 _pgcli()
 {
     local cur prev words cword
@@ -35,7 +57,7 @@ _pgcli()
             _known_hosts_real "$cur"
             return 0
             ;;
-        -U|--user)
+        -U|--user|-u)
             _pg_users
             return 0
             ;;
@@ -43,7 +65,11 @@ _pgcli()
             _pg_databases
             return 0
             ;;
-        --help|-v|--version|-p|--port|-R|--row-limit)
+        -D|--dsn)
+            _pgcli_dsn_aliases
+            return 0
+            ;;
+        --help|-v|--version|-p|--port|-R|--row-limit|--application-name|--prompt|--prompt-dsn|--ssh-tunnel|--log-file|--init-command|-c|--command|-f|--file|-t|--tuples-only|-o|--output)
             # all other arguments are noop with these
             return 0
             ;;
@@ -57,8 +83,10 @@ _pgcli()
         --*)
             # return list of available options
             COMPREPLY=( $( compgen -W '--host --port --user --password --no-password
-                --single-connection --version --dbname --pgclirc --dsn
-                --row-limit --help' -- "$cur" ) )
+                --single-connection --version --dbname --pgclirc --dsn --list-dsn
+                --row-limit --application-name --less-chatty --prompt --prompt-dsn
+                --list --ping --auto-vertical-output --warn --ssh-tunnel --log-file
+                --init-command --yes --command --file --tuples-only --output --help' -- "$cur" ) )
             [[ $COMPREPLY == *= ]] && compopt -o nospace
             return 0
             ;;

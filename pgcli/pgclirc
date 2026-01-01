@@ -66,10 +66,28 @@ generate_aliases = False
 alias_map_file =
 
 # log_file location.
-# In Unix/Linux: ~/.config/pgcli/log
-# In Windows: %USERPROFILE%\AppData\Local\dbcli\pgcli\log
-# %USERPROFILE% is typically C:\Users\{username}
+# Default behavior:
+#   - Tries /var/log/pgcli/pgcli.log first (if running with permissions)
+#   - Falls back to ~/.config/pgcli/log (Unix/Linux) or %USERPROFILE%\AppData\Local\dbcli\pgcli\log (Windows)
+# Log rotation: Daily at midnight, keeps 30 days of logs
+# Format: pgcli.YYYY-MM-DD.log
+# You can specify a custom path here if needed
 log_file = default
+
+# Log rotation mode. Determines how log files are rotated.
+# Possible values:
+#   "none"         - No rotation, single log file (default, backwards compatible)
+#   "day-of-week"  - Rotate by day name (Mon-Sun), overwrites weekly
+#   "day-of-month" - Rotate by day number (01-31), overwrites monthly
+#   "date"         - Rotate by date (YYYYMMDD), never overwrites
+log_rotation_mode = none
+
+# log_destination - Directory where log files are stored.
+# By default uses the same location as log_file (typically ~/.config/pgcli/log)
+# You can specify a different directory if desired
+# Example: log_destination = /var/log/pgcli
+# Leave as "default" to use the standard config location
+log_destination = default
 
 # keyword casing preference. Possible values: "lower", "upper", "auto"
 keyword_casing = auto
@@ -124,6 +142,9 @@ show_bottom_toolbar = True
 # textile, moinmoin, jira, vertical, tsv, csv, sql-insert, sql-update,
 # sql-update-1, sql-update-2 (formatter with sql-* prefix can format query
 # output to executable insertion or updating sql).
+# Additional formats: minimal (aligned columns without headers or borders),
+# csv-noheader (CSV without headers), tsv_noheader (TSV without headers),
+# csv-tab-noheader (same as tsv_noheader).
 # Recommended: psql, fancy_grid and grid.
 table_format = psql
 
@@ -194,6 +215,13 @@ keyring = True
 # Automatically set the session time zone to the local time zone
 # If unset, uses the server's time zone, which is the Postgres default
 use_local_timezone = True
+
+# Application name reported to PostgreSQL server.
+# This name appears in pg_stat_activity and server logs, useful for monitoring
+# and debugging which application or script is making queries.
+# Default: pgcli
+# Can be overridden with --application-name CLI flag or PGAPPNAME environment variable
+application_name = pgcli
 
 # Custom colors for the completion menu, toolbar, etc.
 [colors]

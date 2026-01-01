@@ -326,3 +326,175 @@ def test_connect_uri_without_ssh_tunnel(mock_pgexecute: MagicMock) -> None:
 
     # hostaddr should not be set without SSH tunnel
     assert "hostaddr" not in call_kwargs
+
+
+# =============================================================================
+# Tests for the standalone SSHTunnelManager class (pgcli/ssh_tunnel.py)
+# =============================================================================
+
+import logging
+from pgcli.ssh_tunnel import (
+    SSHTunnelManager,
+    get_tunnel_manager_from_config,
+    SSH_TUNNEL_SUPPORT,
+)
+
+
+class TestSSHTunnelManager:
+    """Tests for SSHTunnelManager class."""
+
+    def test_init_with_explicit_url(self):
+        """Test initialization with explicit SSH tunnel URL."""
+        manager = SSHTunnelManager(ssh_tunnel_url="ssh://user@host:22")
+        assert manager.ssh_tunnel_url == "ssh://user@host:22"
+        assert manager.tunnel is None
+
+    def test_init_with_config(self):
+        """Test initialization with config dictionaries."""
+        ssh_config = {".*\\.prod\\.example\\.com": "bastion.example.com"}
+        dsn_config = {"prod-.*": "ssh://user@bastion:22"}
+
+        manager = SSHTunnelManager(
+            ssh_tunnel_config=ssh_config,
+            dsn_ssh_tunnel_config=dsn_config,
+        )
+        assert manager.ssh_tunnel_config == ssh_config
+        assert manager.dsn_ssh_tunnel_config == dsn_config
+
+    def test_find_tunnel_url_explicit(self):
+        """Test that explicit URL takes precedence."""
+        manager = SSHTunnelManager(
+            ssh_tunnel_url="ssh://explicit@host:22",
+            ssh_tunnel_config={".*": "ssh://config@host:22"},
+        )
+        url = manager.find_tunnel_url(host="anyhost.com")
+        assert url == "ssh://explicit@host:22"
+
+    def test_find_tunnel_url_dsn_match(self):
+        """Test DSN-based tunnel URL lookup."""
+        manager = SSHTunnelManager(
+            dsn_ssh_tunnel_config={
+                "prod-.*": "ssh://prod-bastion:22",
+                "staging-.*": "ssh://staging-bastion:22",
+            }
+        )
+        url = manager.find_tunnel_url(dsn_alias="prod-main")
+        assert url == "ssh://prod-bastion:22"
+
+    def test_find_tunnel_url_host_match(self):
+        """Test host-based tunnel URL lookup."""
+        manager = SSHTunnelManager(
+            ssh_tunnel_config={
+                ".*\\.prod\\.example\\.com": "ssh://prod-bastion:22",
+                ".*\\.staging\\.example\\.com": "ssh://staging-bastion:22",
+            }
+        )
+        url = manager.find_tunnel_url(host="db1.prod.example.com")
+        assert url == "ssh://prod-bastion:22"
+
+    def test_find_tunnel_url_no_match(self):
+        """Test when no tunnel matches."""
+        manager = SSHTunnelManager(
+            ssh_tunnel_config={".*\\.prod\\.example\\.com": "ssh://bastion:22"}
+        )
+        url = manager.find_tunnel_url(host="localhost")
+        assert url is None
+
+    def test_find_tunnel_url_dsn_takes_precedence(self):
+        """Test that DSN match takes precedence over host match."""
+        manager = SSHTunnelManager(
+            ssh_tunnel_config={".*": "ssh://host-bastion:22"},
+            dsn_ssh_tunnel_config={"mydsn": "ssh://dsn-bastion:22"},
+        )
+        url = manager.find_tunnel_url(host="anyhost.com", dsn_alias="mydsn")
+        assert url == "ssh://dsn-bastion:22"
+
+    def test_start_tunnel_no_config(self):
+        """Test start_tunnel returns original host/port when no tunnel configured."""
+        manager = SSHTunnelManager()
+        host, port = manager.start_tunnel(host="db.example.com", port=5432)
+        assert host == "db.example.com"
+        assert port == 5432
+        assert manager.tunnel is None
+
+    @pytest.mark.skipif(not SSH_TUNNEL_SUPPORT, reason="sshtunnel not installed")
+    def test_start_tunnel_with_config(self, mock_ssh_tunnel_forwarder):
+        """Test start_tunnel creates and starts tunnel."""
+        mock_ssh_tunnel_forwarder.return_value.is_active = True
+        mock_ssh_tunnel_forwarder.return_value.local_bind_ports = [12345]
+
+        manager = SSHTunnelManager(
+            ssh_tunnel_url="ssh://user@bastion.example.com:22",
+            logger=logging.getLogger("test"),
+        )
+
+        with patch("pgcli.ssh_tunnel.sshtunnel.SSHTunnelForwarder", mock_ssh_tunnel_forwarder):
+            host, port = manager.start_tunnel(host="db.internal", port=5432)
+
+        assert host == "127.0.0.1"
+        assert port == 12345
+
+    def test_stop_tunnel_no_tunnel(self):
+        """Test stop_tunnel when no tunnel exists."""
+        manager = SSHTunnelManager()
+        manager.stop_tunnel()  # Should not raise
+
+    @pytest.mark.skipif(not SSH_TUNNEL_SUPPORT, reason="sshtunnel not installed")
+    def test_stop_tunnel_active(self):
+        """Test stop_tunnel when tunnel is active."""
+        mock_tunnel = MagicMock()
+        mock_tunnel.is_active = True
+
+        manager = SSHTunnelManager()
+        manager.tunnel = mock_tunnel
+        manager.stop_tunnel()
+
+        mock_tunnel.stop.assert_called_once()
+        assert manager.tunnel is None
+
+
+class TestGetTunnelManagerFromConfig:
+    """Tests for get_tunnel_manager_from_config function."""
+
+    def test_empty_config(self):
+        """Test with empty config."""
+        manager = get_tunnel_manager_from_config({})
+        assert manager.ssh_tunnel_url is None
+        assert manager.ssh_tunnel_config == {}
+        assert manager.dsn_ssh_tunnel_config == {}
+
+    def test_with_ssh_tunnels_config(self):
+        """Test with ssh tunnels section in config."""
+        config = {
+            "ssh tunnels": {
+                ".*\\.prod\\.example\\.com": "ssh://bastion:22",
+            }
+        }
+        manager = get_tunnel_manager_from_config(config)
+        assert manager.ssh_tunnel_config == config["ssh tunnels"]
+
+    def test_with_dsn_ssh_tunnels_config(self):
+        """Test with dsn ssh tunnels section in config."""
+        config = {
+            "dsn ssh tunnels": {
+                "prod-.*": "ssh://bastion:22",
+            }
+        }
+        manager = get_tunnel_manager_from_config(config)
+        assert manager.dsn_ssh_tunnel_config == config["dsn ssh tunnels"]
+
+    def test_with_explicit_url(self):
+        """Test that explicit URL overrides config."""
+        config = {
+            "ssh tunnels": {".*": "ssh://config-bastion:22"},
+        }
+        manager = get_tunnel_manager_from_config(
+            config, ssh_tunnel_url="ssh://explicit-bastion:22"
+        )
+        assert manager.ssh_tunnel_url == "ssh://explicit-bastion:22"
+
+    def test_with_custom_logger(self):
+        """Test with custom logger."""
+        logger = logging.getLogger("custom")
+        manager = get_tunnel_manager_from_config({}, logger=logger)
+        assert manager.logger == logger
