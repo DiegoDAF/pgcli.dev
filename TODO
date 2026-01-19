@@ -1,4 +1,12 @@
 # vi: ft=vimwiki
+
+* [X] Include .d for the \n 
+* [ ] Include .d for the dsn
+* [ ] Allow save passwords for ssh-tunnel
+* [ ] Create template for named queries
+
+
+
 * [ ] Add coverage.
 * [ ] Refactor to sqlcompletion to consume the text from left to right and use a state machine to suggest cols or tables instead of relying on hacks.
 * [ ] Add a few more special commands. (\l pattern, \dp, \ds, \dy, \z etc)
@@ -10,3 +18,4 @@
 * [ ] Add a test for 'select * from custom.abc where custom.abc.' should suggest columns from abc.
 * [ ] pgexecute columns(), tables() etc can be just cursors instead of fetchall()
 * [ ] Add colorschemes in config file.
+
