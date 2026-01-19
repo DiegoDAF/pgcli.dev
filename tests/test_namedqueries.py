@@ -254,3 +254,88 @@ class TestExtendedNamedQueries:
         nq = ExtendedNamedQueries.from_config(config)
 
         assert nq.get("nonexistent") is None
+
+    def test_load_without_section_header(self):
+        """Test loading queries from file without [named queries] section."""
+        config = self._create_config()
+        os.makedirs(self.include_dir, exist_ok=True)
+
+        # Create file without section header - just key=value pairs
+        filepath = os.path.join(self.include_dir, "simple.conf")
+        with open(filepath, "w") as f:
+            f.write('# Simple queries without section\n')
+            f.write('uptime = "select now() - pg_postmaster_start_time() as uptime;"\n')
+            f.write('version = "select version();"\n')
+
+        nq = ExtendedNamedQueries.from_config(config)
+
+        assert set(nq.list()) == {"uptime", "version"}
+        assert nq.get("uptime") == "select now() - pg_postmaster_start_time() as uptime;"
+        assert nq.get("version") == "select version();"
+
+    def test_mixed_formats_in_include_dir(self):
+        """Test loading from files with and without section headers."""
+        config = self._create_config()
+        os.makedirs(self.include_dir, exist_ok=True)
+
+        # File with section
+        self._create_include_file("with_section.conf", {
+            "query_a": "SELECT 'a'"
+        })
+
+        # File without section
+        filepath = os.path.join(self.include_dir, "without_section.conf")
+        with open(filepath, "w") as f:
+            f.write('query_b = "SELECT \'b\'"\n')
+
+        nq = ExtendedNamedQueries.from_config(config)
+
+        assert set(nq.list()) == {"query_a", "query_b"}
+
+    def test_includedir_directive(self):
+        """Test includedir directive in config."""
+        # Create a custom include directory
+        custom_dir = os.path.join(self.temp_dir, "my_queries")
+        os.makedirs(custom_dir)
+
+        # Create config with includedir directive
+        config = ConfigObj(self.config_file, encoding="utf-8")
+        config["named queries"] = {
+            "includedir": "./my_queries",
+            "main_query": "SELECT 'main'"
+        }
+        config.write()
+        config = ConfigObj(self.config_file, encoding="utf-8")
+
+        # Create a file in the custom directory
+        custom_file = os.path.join(custom_dir, "custom.conf")
+        with open(custom_file, "w") as f:
+            f.write('included_query = "SELECT \'included\'"\n')
+
+        nq = ExtendedNamedQueries.from_config(config)
+
+        # Should find both queries
+        assert set(nq.list()) == {"main_query", "included_query"}
+        # includedir should not appear as a query
+        assert "includedir" not in nq.list()
+        assert nq.get("includedir") is None
+
+    def test_includedir_absolute_path(self):
+        """Test includedir with absolute path."""
+        custom_dir = os.path.join(self.temp_dir, "absolute_queries")
+        os.makedirs(custom_dir)
+
+        config = ConfigObj(self.config_file, encoding="utf-8")
+        config["named queries"] = {
+            "includedir": custom_dir  # absolute path
+        }
+        config.write()
+        config = ConfigObj(self.config_file, encoding="utf-8")
+
+        custom_file = os.path.join(custom_dir, "test.conf")
+        with open(custom_file, "w") as f:
+            f.write('abs_query = "SELECT 1"\n')
+
+        nq = ExtendedNamedQueries.from_config(config)
+
+        assert nq.get("abs_query") == "SELECT 1"

@@ -259,17 +259,21 @@ output.even-row = ""
 output.null = "#808080"
 
 # Named queries are queries you can execute by name.
-# You can also organize named queries in separate files by creating a
-# 'namedqueries.d' directory in the same location as this config file.
-# Each .conf file in that directory should have a [named queries] section.
-# Example:
+# You can organize named queries in separate files using 'includedir'.
+#
+# Files in includedir can use two formats:
+#   1. With section: [named queries] followed by key=value pairs
+#   2. Without section: just key=value pairs (simpler for .conf files)
+#
+# Example structure:
 #   ~/.config/pgcli/namedqueries.d/
 #       activity.conf    # queries for monitoring activity
 #       vacuum.conf      # queries for vacuum/maintenance
-#       custom.conf      # your custom queries
 #
-# Queries defined in this file take precedence over those in namedqueries.d/
+# Queries here take precedence over those in includedir.
+# Default includedir is 'namedqueries.d' in the config directory.
 [named queries]
+# includedir = "./namedqueries.d"
 # ver = "SELECT version()"
 
 # Here's where you can provide a list of connection string aliases.

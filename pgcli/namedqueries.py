@@ -65,15 +65,32 @@ class ExtendedNamedQueries(NamedQueries):
     def _get_include_dir(self):
         """Get the path to the namedqueries.d directory.
 
+        Checks in order:
+        1. Explicit include_dir passed to constructor
+        2. @includedir directive in [named queries] section
+        3. Default namedqueries.d in config directory
+
         Returns:
             Path to the include directory, or None if it cannot be determined
         """
         if self._include_dir:
             return self._include_dir
 
-        # Try to determine from config filename
+        config_dir = None
         if hasattr(self.config, "filename") and self.config.filename:
             config_dir = os.path.dirname(self.config.filename)
+
+        # Check for includedir directive in named queries section
+        named_queries = self.config.get(self.section_name, {})
+        includedir = named_queries.get("includedir")
+        if includedir:
+            # Resolve relative paths from config directory
+            if config_dir and not os.path.isabs(includedir):
+                return os.path.join(config_dir, includedir)
+            return includedir
+
+        # Default to namedqueries.d in config directory
+        if config_dir:
             return os.path.join(config_dir, self.INCLUDE_DIR_NAME)
 
         return None
@@ -110,12 +127,24 @@ class ExtendedNamedQueries(NamedQueries):
     def _load_queries_from_file(self, filepath):
         """Load named queries from a single config file.
 
+        Files in namedqueries.d can use two formats:
+        1. With section: [named queries] followed by key=value pairs
+        2. Without section: just key=value pairs (entire file is queries)
+
         Args:
             filepath: Path to the config file to load
         """
         try:
             file_config = ConfigObj(filepath, encoding="utf-8")
+
+            # First try to get from [named queries] section
             queries = file_config.get(self.section_name, {})
+
+            # If no section found, treat entire file as queries
+            # (excluding any sections that might exist)
+            if not queries:
+                queries = {k: v for k, v in file_config.items()
+                          if not isinstance(v, dict)}
 
             if queries:
                 logger.debug(
@@ -129,14 +158,18 @@ class ExtendedNamedQueries(NamedQueries):
         except Exception as e:
             logger.warning(f"Error loading named queries from {filepath}: {e}")
 
+    # Directives that are not queries
+    DIRECTIVES = {"includedir"}
+
     def list(self):
         """List all named queries from config and include directory.
 
         Returns:
             List of query names (combined from main config and includes)
         """
-        # Get queries from main config
-        main_queries = self.config.get(self.section_name, {})
+        # Get queries from main config (excluding directives)
+        main_queries = {k: v for k, v in self.config.get(self.section_name, {}).items()
+                        if k not in self.DIRECTIVES}
 
         # Combine with included queries (main config takes precedence)
         all_queries = dict(self._included_queries)
@@ -155,6 +188,10 @@ class ExtendedNamedQueries(NamedQueries):
         Returns:
             The query string, or None if not found
         """
+        # Don't return directives as queries
+        if name in self.DIRECTIVES:
+            return None
+
         # First check main config (takes precedence)
         main_queries = self.config.get(self.section_name, {})
         if name in main_queries:
@@ -170,8 +207,10 @@ class ExtendedNamedQueries(NamedQueries):
             Dictionary of query_name -> query_string
         """
         # Combine included queries with main config (main takes precedence)
+        # Exclude directives
         all_queries = dict(self._included_queries)
-        main_queries = self.config.get(self.section_name, {})
+        main_queries = {k: v for k, v in self.config.get(self.section_name, {}).items()
+                        if k not in self.DIRECTIVES}
         all_queries.update(main_queries)
         return all_queries
 

@@ -27,12 +27,13 @@ Features:
     * Automatically reads from `~/.config/pgcli/config` [alias_dsn] section
     * Updated all CLI options in bash completion script
     * Example: `pgcli -D <TAB>` shows all configured DSN aliases
-* Add support for organizing named queries in separate files via `namedqueries.d` directory.
-    * Create a `namedqueries.d` directory alongside your config file
-    * Each `.conf` file in the directory should have a `[named queries]` section
+* Add support for organizing named queries in separate files via `includedir` directive.
+    * Use `includedir = "./namedqueries.d"` in `[named queries]` section
+    * Default directory is `namedqueries.d` in config directory (works without explicit directive)
+    * Files can use simple format (just `key = "query"`) without `[named queries]` header
     * Queries from main config take precedence over included files
     * Files are loaded in alphabetical order (later files override earlier ones)
-    * Example structure: `~/.config/pgcli/namedqueries.d/activity.conf`
+    * Example: `~/.config/pgcli/namedqueries.d/activity.conf` with `uptime = "select now()"`
     * Useful for organizing large collections of DBA queries by category
 
 Bug Fixes:
