@@ -2,8 +2,16 @@
 
 * [X] Autocomplete \n with loaded named queries
 * [X] Reload named queries without restarting (\nr) - v4.3.14
+* [ ] autocomplete set role command with roles.
 
 * [ ] Add coverage.
+* [ ] Fix mypy errors (134 total). Main issues:
+      - pgexecute.py: ~30 errors (Optional/None checks)
+      - main.py: 25 errors (Optional checks, namedtuple naming)
+      - packages/sqlcompletion.py: ~25 errors (missing call args)
+      - pgcompleter.py: 10 errors (type annotations)
+      - ssh_tunnel.py: 7 errors (Optional checks)
+      Run: .venv/bin/python -m mypy
 * [ ] Refactor to sqlcompletion to consume the text from left to right and use a state machine to suggest cols or tables instead of relying on hacks.
 * [ ] Add a few more special commands. (\l pattern, \dp, \ds, \dy, \z etc)
 * [ ] Refactor pgspecial.py to a class. 
