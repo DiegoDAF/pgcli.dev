@@ -3,6 +3,17 @@ Upcoming (TBD)
 
 Features:
 ---------
+
+
+Bug Fixes:
+----------
+
+
+4.3.15 (2026-01-20)
+===================
+
+Features:
+---------
 * Add `allow_agent` config option in `[ssh tunnels]` section.
     * Enables SSH agent for keys with passphrase (default: True)
     * Set to False to use only keys specified in ~/.ssh/config
