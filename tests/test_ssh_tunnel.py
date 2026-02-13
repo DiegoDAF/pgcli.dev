@@ -152,8 +152,8 @@ def test_config(tmpdir: os.PathLike, mock_ssh_tunnel_forwarder: MagicMock, mock_
     config = ConfigObj()
     config.filename = pgclirc
     config["ssh tunnels"] = {}
-    config["ssh tunnels"][r"\.com$"] = tunnel_url
-    config["ssh tunnels"][r"^hello-"] = tunnel2_url
+    config["ssh tunnels"][r".*\.com"] = tunnel_url
+    config["ssh tunnels"][r"hello-.*"] = tunnel2_url
     config.write()
 
     # Unmatched host
@@ -399,6 +399,28 @@ class TestSSHTunnelManager:
         )
         url = manager.find_tunnel_url(host="localhost")
         assert url is None
+
+    def test_find_tunnel_url_no_partial_host_match(self):
+        """Test that partial hostname matches are rejected (re.fullmatch)."""
+        manager = SSHTunnelManager(
+            ssh_tunnel_config={"prod": "ssh://bastion:22"}
+        )
+        # "prod" should NOT match "nonprod" or "prod.extra.com"
+        assert manager.find_tunnel_url(host="nonprod") is None
+        assert manager.find_tunnel_url(host="prod.extra.com") is None
+        # But should match exactly "prod"
+        assert manager.find_tunnel_url(host="prod") == "ssh://bastion:22"
+
+    def test_find_tunnel_url_no_partial_dsn_match(self):
+        """Test that partial DSN matches are rejected (re.fullmatch)."""
+        manager = SSHTunnelManager(
+            dsn_ssh_tunnel_config={"prod": "ssh://bastion:22"}
+        )
+        # "prod" should NOT match "nonprod" or "prod-extra"
+        assert manager.find_tunnel_url(dsn_alias="nonprod") is None
+        assert manager.find_tunnel_url(dsn_alias="prod-extra") is None
+        # But should match exactly "prod"
+        assert manager.find_tunnel_url(dsn_alias="prod") == "ssh://bastion:22"
 
     def test_find_tunnel_url_dsn_takes_precedence(self):
         """Test that DSN match takes precedence over host match."""

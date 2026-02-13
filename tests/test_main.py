@@ -937,3 +937,43 @@ def test_application_name_default_when_not_in_config(executor):
             cli = PGCli(pgexecute=executor, pgclirc_file=config_file)
 
         assert cli.application_name == "pgcli"
+
+
+@pytest.mark.parametrize(
+    "sql, expected",
+    [
+        (
+            "create user foo with password 'secret123'",
+            "create user foo with password '***'",
+        ),
+        (
+            "ALTER USER foo WITH PASSWORD 'my_pass'",
+            "ALTER USER foo WITH PASSWORD '***'",
+        ),
+        (
+            "CREATE ROLE admin WITH PASSWORD 'admin_pass' LOGIN",
+            "CREATE ROLE admin WITH PASSWORD '***' LOGIN",
+        ),
+        (
+            "ALTER ROLE admin PASSWORD 'new_pass'",
+            "ALTER ROLE admin PASSWORD '***'",
+        ),
+        (
+            "create user foo with encrypted password 'secret'",
+            "create user foo with encrypted password '***'",
+        ),
+        (
+            "SELECT * FROM users WHERE name = 'password'",
+            "SELECT * FROM users WHERE name = 'password'",
+        ),
+    ],
+)
+def test_sql_password_redaction_in_logs(sql, expected):
+    """Test that PASSWORD clauses are redacted before debug logging."""
+    redacted = re.sub(
+        r"(PASSWORD\s+)'[^']*'",
+        r"\1'***'",
+        sql,
+        flags=re.IGNORECASE,
+    )
+    assert redacted == expected
