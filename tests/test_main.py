@@ -984,3 +984,50 @@ def test_sql_password_redaction_in_logs(sql, expected):
         flags=re.IGNORECASE,
     )
     assert redacted == expected
+
+
+class TestSanitizePath:
+    """Test _sanitize_path blocks restricted paths and non-regular files."""
+
+    def test_normal_path(self, tmp_path):
+        f = tmp_path / "test.sql"
+        f.write_text("SELECT 1")
+        resolved, err = PGCli._sanitize_path(str(f))
+        assert err is None
+        assert resolved == str(f)
+
+    def test_nonexistent_path_ok(self, tmp_path):
+        resolved, err = PGCli._sanitize_path(str(tmp_path / "new_file.txt"))
+        assert err is None
+
+    def test_home_tilde_expansion(self):
+        resolved, err = PGCli._sanitize_path("~/test.sql")
+        assert err is None
+        assert resolved.startswith("/home/")
+
+    @pytest.mark.parametrize("path", ["/dev/null", "/dev/random", "/proc/self/environ", "/sys/class"])
+    def test_blocked_system_paths(self, path):
+        _, err = PGCli._sanitize_path(path)
+        assert err is not None
+        assert "restricted" in err.lower()
+
+    def test_blocks_directory(self, tmp_path):
+        _, err = PGCli._sanitize_path(str(tmp_path))
+        assert err is not None
+        assert "Not a regular file" in err
+
+    def test_symlink_resolved(self, tmp_path):
+        target = tmp_path / "real.txt"
+        target.write_text("data")
+        link = tmp_path / "link.txt"
+        link.symlink_to(target)
+        resolved, err = PGCli._sanitize_path(str(link))
+        assert err is None
+        assert resolved == str(target)
+
+    def test_symlink_to_dev_blocked(self, tmp_path):
+        link = tmp_path / "sneaky"
+        link.symlink_to("/dev/null")
+        _, err = PGCli._sanitize_path(str(link))
+        assert err is not None
+        assert "restricted" in err.lower()

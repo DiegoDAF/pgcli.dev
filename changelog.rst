@@ -27,6 +27,10 @@ Security:
 * Redact PASSWORD clauses from SQL debug logs.
     * `CREATE USER/ALTER USER/CREATE ROLE/ALTER ROLE` with PASSWORD are now logged
       with the password replaced by `***`
+* Sanitize file paths in ``\i``, ``\o``, and ``\log-file`` commands.
+    * Resolves symlinks before access to prevent path traversal
+    * Blocks access to system paths (``/dev/``, ``/proc/``, ``/sys/``)
+    * Rejects non-regular files (directories, pipes, sockets)
 
 
 4.3.17 (2026-02-13)

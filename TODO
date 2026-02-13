@@ -47,10 +47,10 @@
       - Vulnerable to MITM attacks on SSH tunnels
 * [X] Security: Use re.fullmatch() for SSH tunnel regex matching - v4.3.18
       - Currently re.search() can match partial hostnames (e.g. "prod" matches "nonprod")
-* [ ] Security: \i command opens user-specified file paths without sanitization
+* [X] Security: \i command opens user-specified file paths without sanitization - v4.3.18
       - main.py:570 - os.path.expanduser(pattern) with no validation
       - Low practical risk (user already has shell access), but could sanitize
-* [ ] Security: \o and \log-file write to user-specified paths without sanitization
+* [X] Security: \o and \log-file write to user-specified paths without sanitization - v4.3.18
       - main.py:619-634 - opens arbitrary paths for writing
       - Same consideration as \i
 * [X] Security: SQL statements with passwords may be logged - v4.3.18

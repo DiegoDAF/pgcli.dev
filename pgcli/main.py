@@ -562,12 +562,32 @@ class PGCli:
             'You are now connected to database "%s" as user "%s"' % (self.pgexecute.dbname, self.pgexecute.user),
         )
 
+    @staticmethod
+    def _sanitize_path(path_str):
+        """Sanitize a user-provided file path.
+
+        Resolves symlinks and blocks access to system-sensitive paths
+        (/dev/, /proc/, /sys/) and non-regular files (pipes, sockets, etc.).
+
+        Returns (resolved_path, error_message). error_message is None if OK.
+        """
+        resolved = os.path.realpath(os.path.expanduser(path_str))
+        blocked = ("/dev/", "/proc/", "/sys/")
+        if any(resolved.startswith(p) or resolved == p.rstrip("/") for p in blocked):
+            return None, f"Access denied: path resolves to restricted location ({resolved})"
+        if os.path.exists(resolved) and not os.path.isfile(resolved):
+            return None, f"Not a regular file: {resolved}"
+        return resolved, None
+
     def execute_from_file(self, pattern, **_):
         if not pattern:
             message = "\\i: missing required argument"
             return [(None, None, None, message, "", False, True)]
+        filepath, err = self._sanitize_path(pattern)
+        if err:
+            return [(None, None, None, err, "", False, True)]
         try:
-            with open(os.path.expanduser(pattern), encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 query = f.read()
         except OSError as e:
             return [(None, None, None, str(e), "", False, True)]
@@ -602,7 +622,10 @@ class PGCli:
             message = "Logfile capture disabled"
             return [(None, None, None, message, "", True, True)]
 
-        log_file = pathlib.Path(pattern).expanduser().absolute()
+        log_file, err = self._sanitize_path(pattern)
+        if err:
+            self.log_file = None
+            return [(None, None, None, err + "\nLogfile capture disabled", "", False, True)]
 
         try:
             with open(log_file, "a+"):
@@ -621,7 +644,10 @@ class PGCli:
             self.output_file = None
             message = "File output disabled"
             return [(None, None, None, message, "", True, True)]
-        filename = os.path.abspath(os.path.expanduser(pattern))
+        filename, err = self._sanitize_path(pattern)
+        if err:
+            self.output_file = None
+            return [(None, None, None, err + "\nFile output disabled", "", False, True)]
         if not os.path.isfile(filename):
             try:
                 open(filename, "w").close()
