@@ -144,6 +144,7 @@ class SSHTunnelManager:
             "logger": self.logger,
             "ssh_config_file": "~/.ssh/config",
             "allow_agent": self.allow_agent,
+            "host_pkey_directories": [],  # Don't scan ~/.ssh/ for keys, use ssh-agent only
             "compression": False,
         }
 

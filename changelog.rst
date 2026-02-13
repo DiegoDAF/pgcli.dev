@@ -7,6 +7,10 @@ Features:
 
 Bug Fixes:
 ----------
+* Fix SSH tunnel prompting for key passphrases unnecessarily.
+    * Pass `host_pkey_directories=[]` to SSHTunnelForwarder to prevent scanning
+      `~/.ssh/` for key files (id_ecdsa, id_rsa, etc.)
+    * SSH agent is still used for key authentication (`allow_agent=True`)
 
 
 4.3.17 (2026-02-13)
