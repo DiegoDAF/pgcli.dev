@@ -436,7 +436,13 @@ class PGExecute:
 
     def execute_normal_sql(self, split_sql):
         """Returns tuple (title, rows, headers, status)"""
-        _logger.debug("Regular sql statement. sql: %r", split_sql)
+        log_sql = re.sub(
+            r"(PASSWORD\s+)'[^']*'",
+            r"\1'***'",
+            split_sql,
+            flags=re.IGNORECASE,
+        )
+        _logger.debug("Regular sql statement. sql: %r", log_sql)
 
         title = ""
 

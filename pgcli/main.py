@@ -783,13 +783,13 @@ class PGCli:
 
         if self.dsn_alias and self.dsn_ssh_tunnel_config and not self.ssh_tunnel_url:
             for dsn_regex, tunnel_url in self.dsn_ssh_tunnel_config.items():
-                if re.search(dsn_regex, self.dsn_alias):
+                if re.fullmatch(dsn_regex, self.dsn_alias):
                     self.ssh_tunnel_url = tunnel_url
                     break
 
         if self.ssh_tunnel_config and not self.ssh_tunnel_url:
             for db_host_regex, tunnel_url in self.ssh_tunnel_config.items():
-                if re.search(db_host_regex, host):
+                if re.fullmatch(db_host_regex, host):
                     self.ssh_tunnel_url = tunnel_url
                     break
 

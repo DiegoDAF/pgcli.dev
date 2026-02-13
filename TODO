@@ -45,7 +45,7 @@
 * [ ] Security: Configure explicit SSH host key verification policy
       - sshtunnel may default to AutoAddPolicy (accepts any host key)
       - Vulnerable to MITM attacks on SSH tunnels
-* [ ] Security: Use re.fullmatch() for SSH tunnel regex matching
+* [X] Security: Use re.fullmatch() for SSH tunnel regex matching - v4.3.18
       - Currently re.search() can match partial hostnames (e.g. "prod" matches "nonprod")
 * [ ] Security: \i command opens user-specified file paths without sanitization
       - main.py:570 - os.path.expanduser(pattern) with no validation
@@ -53,6 +53,6 @@
 * [ ] Security: \o and \log-file write to user-specified paths without sanitization
       - main.py:619-634 - opens arbitrary paths for writing
       - Same consideration as \i
-* [ ] Security: SQL statements with passwords may be logged
+* [X] Security: SQL statements with passwords may be logged - v4.3.18
       - pgexecute.py:439 - CREATE USER/ALTER USER with PASSWORD gets logged at DEBUG
       - Could detect and redact password clauses before logging

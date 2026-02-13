@@ -84,7 +84,7 @@ class SSHTunnelManager:
         # Check host-based tunnel config
         if host and self.ssh_tunnel_config:
             for host_regex, tunnel_url in self.ssh_tunnel_config.items():
-                if re.search(host_regex, host):
+                if re.fullmatch(host_regex, host):
                     self.logger.debug(
                         "Found SSH tunnel for host '%s' matching '%s': %s",
                         host,

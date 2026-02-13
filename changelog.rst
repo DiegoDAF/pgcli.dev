@@ -19,6 +19,12 @@ Security:
     * Applies to both `main.py` and `ssh_tunnel.py` log messages
 * Mask passwords in `--list-dsn` output.
     * Connection strings in URI format now show `***` instead of the password
+* Use `re.fullmatch()` for SSH tunnel regex matching instead of `re.search()`.
+    * Prevents partial hostname matches (e.g. "prod" no longer matches "nonprod")
+    * Applies to both host-based and DSN-based tunnel config lookups
+* Redact PASSWORD clauses from SQL debug logs.
+    * `CREATE USER/ALTER USER/CREATE ROLE/ALTER ROLE` with PASSWORD are now logged
+      with the password replaced by `***`
 
 
 4.3.17 (2026-02-13)
